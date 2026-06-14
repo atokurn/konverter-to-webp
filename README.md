@@ -1,16 +1,76 @@
-# React + Vite
+# WebM to WebP Converter (Transparan & Animasi)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplikasi berbasis web untuk mengonversi berkas video **WebM (ber-alpha/transparan)** menjadi berkas gambar/animasi **WebP transparan** secara langsung di sisi klien menggunakan **FFmpeg WASM**.
 
-Currently, two official plugins are available:
+## 🚀 Fitur Utama
+- **Batch Conversion:** Unggah beberapa file sekaligus untuk dikonversi secara antrean.
+- **Transparansi Utuh:** Menggunakan metode decoding khusus `-vcodec libvpx-vp9` / `-vcodec libvpx` untuk mempertahankan saluran alpha (transparansi) asli dari file WebM tanpa mengubah background menjadi warna putih/hitam.
+- **Kontrol Penuh:**
+  - **Start / Pause / Stop:** Menunda, melanjutkan, atau menghentikan proses konversi yang sedang berjalan kapan saja.
+  - **Retry:** Tombol untuk mengulang kembali file-file yang gagal dikonversi, baik secara satuan maupun massal (*Ulangi yang Gagal*).
+- **Pengaturan Kustom:**
+  - **Interval Waktu:** Atur jeda waktu antar konversi berkas untuk mengoptimalkan kinerja memori (mencegah masalah memori penuh / OOM pada browser).
+- **Pemulihan Otomatis:** Sistem secara otomatis mendeteksi crash pada modul FFmpeg WASM (seperti kehabisan memori) dan memuat ulang engine secara bersih sebelum mencoba kembali berkas yang bermasalah.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🛠️ Teknologi yang Digunakan
+- **Frontend Framework:** React (Vite)
+- **Styling:** TailwindCSS
+- **Core Conversion Engine:** `@ffmpeg/ffmpeg` & `@ffmpeg/util` (FFmpeg WebAssembly)
 
-## React Compiler
+## 💻 Cara Menjalankan secara Lokal
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+1. **Kloning Repositori:**
+   ```bash
+   git clone <url-repository>
+   cd konverter-to-webp
+   ```
 
-## Expanding the ESLint configuration
+2. **Instalasi Dependensi:**
+   ```bash
+   npm install
+   ```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+3. **Jalankan Development Server:**
+   ```bash
+   npm run dev
+   ```
+
+## 🌐 Panduan Deploy ke Vercel
+
+Karena aplikasi ini menggunakan **FFmpeg WASM**, browser wajib mengaktifkan fitur **Cross-Origin Isolation** melalui header keamanan HTTP. Jika tidak, engine FFmpeg tidak akan bisa dimuat di lingkungan produksi.
+
+Kami sudah menyertakan file konfigurasi [`vercel.json`](./vercel.json) di dalam proyek ini:
+
+```json
+{
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin"
+        },
+        {
+          "key": "Cross-Origin-Embedder-Policy",
+          "value": "require-corp"
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Cara Deploy Menggunakan Vercel CLI:
+1. Pastikan Anda sudah login ke Vercel:
+   ```bash
+   npx vercel login
+   ```
+2. Jalankan perintah deploy untuk pertama kali:
+   ```bash
+   npx vercel
+   ```
+3. Deploy langsung ke produksi agar domain utama ter-update:
+   ```bash
+   npx vercel --prod
+   ```
