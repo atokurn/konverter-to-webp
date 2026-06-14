@@ -3,13 +3,13 @@ import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
 import { 
   UploadCloud, FileVideo, Loader2, Download, AlertCircle, Trash2, 
-  Settings, HelpCircle, ShieldCheck, Play, Pause, Square, MoreVertical, Plus, Info, X, FolderUp, Edit3, Archive, Type
+  Settings, HelpCircle, ShieldCheck, Play, Pause, Square, MoreVertical, Plus, Info, X, FolderUp, Edit3, Archive, Type, RefreshCw
 } from 'lucide-react';
 import JSZip from 'jszip';
 import './App.css';
 
 // Komponen FileCard untuk merender tiap item dalam grid
-function FileCard({ f, isConverting, removeFile, onOpenFullscreen, onRename, isSelected, toggleSelect }) {
+function FileCard({ f, isConverting, removeFile, onOpenFullscreen, onRename, isSelected, toggleSelect, onRetry }) {
   const isVideo = f.file.type.includes('video') || f.file.name.endsWith('.webm');
   const typeTag = isVideo ? 'WEBM' : 'APNG';
   const sizeMB = (f.file.size / (1024 * 1024)).toFixed(2) + ' MB';
@@ -129,7 +129,14 @@ function FileCard({ f, isConverting, removeFile, onOpenFullscreen, onRename, isS
           </span>
         )}
         {f.status === 'success' && <span className="status-badge success">Selesai</span>}
-        {f.status === 'error' && <span className="status-badge error" title={f.errorMessage}>Gagal</span>}
+        {f.status === 'error' && (
+          <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+            <span className="status-badge error" title={f.errorMessage}>Gagal</span>
+            <button className="btn-icon-footer" onClick={onRetry} title="Coba Ulang" disabled={isConverting} style={{ padding: '4px' }}>
+              <RefreshCw size={14} />
+            </button>
+          </div>
+        )}
 
         {f.status === 'success' ? (
           <a href={f.url} download={(f.customName || f.file.name).replace(/\.[^/.]+$/, '') + '_converted.webp'} className="btn-download-small" title="Download WebP">
@@ -418,6 +425,16 @@ function App() {
     setSelectedIds(new Set());
   };
 
+  const retryFailed = () => {
+    if (isConverting) return;
+    setFiles(prev => prev.map(f => f.status === 'error' ? { ...f, status: 'pending', errorMessage: '' } : f));
+  };
+
+  const retrySingle = (id) => {
+    if (isConverting) return;
+    setFiles(prev => prev.map(f => f.id === id ? { ...f, status: 'pending', errorMessage: '' } : f));
+  };
+
   const handleRename = (id, newName) => {
     setFiles(prev => prev.map(f => f.id === id ? { ...f, customName: newName } : f));
   };
@@ -590,26 +607,27 @@ function App() {
         let exitCode = -1;
         
         for (const strategy of strategies) {
-          let timedOut = false;
+          let strategyFailed = false;
           try {
             console.log(`Trying strategy: ${strategy.name}`);
             exitCode = await execWithTimeout(ffmpeg, strategy.args, settings.conversionTimeout * 1000);
           } catch (err) {
-            if (err.message === 'TIMEOUT') {
-              timedOut = true;
-              console.warn(`File timed out on strategy ${strategy.name} (${settings.conversionTimeout}s), reloading FFmpeg...`);
-              try { ffmpeg.terminate(); } catch { /* ignore */ }
-              const newFFmpeg = new FFmpeg();
-              ffmpegRef.current = newFFmpeg;
-              attachFFmpegListeners(newFFmpeg);
-              await loadFFmpegCore(newFFmpeg);
-              ffmpeg = newFFmpeg;
-            } else {
-              console.error(`Strategy ${strategy.name} threw an error:`, err);
-            }
+            strategyFailed = true;
+            console.error(`Strategy ${strategy.name} failed with error:`, err);
+            
+            // Reload FFmpeg on ANY error (timeout or WASM crash) to prevent cascade failures
+            try { ffmpeg.terminate(); } catch { /* ignore */ }
+            const newFFmpeg = new FFmpeg();
+            ffmpegRef.current = newFFmpeg;
+            attachFFmpegListeners(newFFmpeg);
+            await loadFFmpegCore(newFFmpeg);
+            ffmpeg = newFFmpeg;
+            
+            // CRITICAL: Re-write the input file because the new FFmpeg instance has an empty memory filesystem!
+            await ffmpeg.writeFile(safeName, await fetchFile(currentFile.file));
           }
           
-          if (!timedOut && exitCode === 0) {
+          if (!strategyFailed && exitCode === 0) {
             console.log(`Strategy ${strategy.name} succeeded!`);
             break;
           }
@@ -955,6 +973,11 @@ function App() {
                     Pilih Semua
                   </label>
                 )}
+                {failCount > 0 && (
+                  <button className="btn-outline error" onClick={retryFailed} disabled={isConverting}>
+                    <RefreshCw size={14} /> Ulangi yang Gagal ({failCount})
+                  </button>
+                )}
                 {successCount > 0 && (
                   <button className="btn-outline primary-outline" onClick={downloadSelectedZip} disabled={isZipping}>
                     {isZipping ? <Loader2 className="spinner" size={16} /> : <Archive size={16} />}
@@ -993,6 +1016,7 @@ function App() {
                     onRename={handleRename}
                     isSelected={selectedIds.has(f.id)}
                     toggleSelect={toggleSelect}
+                    onRetry={() => retrySingle(f.id)}
                   />
                 ))}
                 
