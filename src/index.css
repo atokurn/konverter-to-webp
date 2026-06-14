@@ -1,0 +1,48 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;700;800&display=swap');
+
+:root {
+  --primary: #6c5ce7;
+  --primary-hover: #5b4bc4;
+  --bg-color: #f8f9ff;
+  --card-bg: #ffffff;
+  --card-border: #eaecf0;
+  --text-main: #1f2937;
+  --text-muted: #6b7280;
+  --success: #10b981;
+  --success-bg: #d1fae5;
+  --success-text: #065f46;
+  --error: #ef4444;
+  --input-border: #d1d5db;
+  --input-bg: #f9fafb;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg-color);
+  background-image: 
+    radial-gradient(circle at 15% 10%, rgba(108, 92, 231, 0.05), transparent 30%),
+    radial-gradient(circle at 85% 20%, rgba(16, 185, 129, 0.05), transparent 30%),
+    radial-gradient(circle at 50% 80%, rgba(99, 102, 241, 0.05), transparent 40%);
+  color: var(--text-main);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  -webkit-font-smoothing: antialiased;
+  padding: 3rem 2rem;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+#root {
+  width: 100%;
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Outfit', sans-serif;
+  margin: 0;
+  color: #111827;
+}
